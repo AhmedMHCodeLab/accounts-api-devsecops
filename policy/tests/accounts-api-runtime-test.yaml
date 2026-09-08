@@ -1,0 +1,32 @@
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: accounts-api-image-trust
+spec:
+  matchConstraints:
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+
+  matchImageReferences:
+    - glob: "123456789012.dkr.ecr.ap-south-1.amazonaws.com/accounts-api:*"
+
+  attestors:
+    - name: github-actions
+      cosign:
+        keyless:
+          identities:
+            - issuer: "https://token.actions.githubusercontent.com"
+              subject: "https://github.com/AhmedMHCodeLab/accounts-api-devsecops/.github/workflows/build.yml@refs/heads/main"
+
+  validationConfigurations:
+    required: true
+    mutateDigest: true
+    verifyDigest: true

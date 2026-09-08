@@ -1,0 +1,54 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: accounts-api-default-deny-egress
+  namespace: accounts
+spec:
+  podSelector:
+    matchLabels:
+      app: accounts-api
+  policyTypes:
+    - Egress
+  egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: accounts-api-allow-dns
+  namespace: accounts
+spec:
+  podSelector:
+    matchLabels:
+      app: accounts-api
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: accounts-api-allow-kyc-provider
+  namespace: accounts
+spec:
+  podSelector:
+    matchLabels:
+      app: accounts-api
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        # Replace with the KYC provider's published egress CIDRs.
+        - ipBlock:
+            cidr: 203.0.113.0/24
+      ports:
+        - protocol: TCP
+          port: 443

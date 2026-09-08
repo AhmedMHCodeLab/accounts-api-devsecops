@@ -1,0 +1,22 @@
+- rule: Accounts API unexpected shell
+  desc: >
+    Detect shell execution inside the accounts-api container.
+    A financial API has no operational requirement to spawn an interactive shell.
+  condition: >
+    spawned_process
+    and container
+    and k8s.ns.name = "accounts"
+    and k8s.pod.label.app = "accounts-api"
+    and proc.name in (sh, bash, ash, zsh, dash)
+  output: >
+    Accounts API spawned a shell
+    namespace=%k8s.ns.name
+    pod=%k8s.pod.name
+    container=%container.name
+    user=%user.name
+    command=%proc.cmdline
+    parent=%proc.pname
+    image=%container.image.repository:%container.image.tag
+    node=%host.name
+  priority: WARNING
+  tags: [accounts-api, runtime, shell]

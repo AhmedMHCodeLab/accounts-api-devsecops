@@ -6,11 +6,11 @@ metadata:
     policies.kyverno.io/title: Accounts API runtime boundary
     policies.kyverno.io/category: Security
     policies.kyverno.io/description: >
-      Prevent accounts-api from mounting container runtime sockets.
-      This workload has no legitimate requirement for host container-runtime access.
+      Prevents accounts-api from accessing the container runtime socket.
+      The workload has no legitimate requirement to control the node runtime.
 spec:
-  background: true
   validationFailureAction: Enforce
+  background: true
   rules:
     - name: disallow-container-runtime-socket
       match:

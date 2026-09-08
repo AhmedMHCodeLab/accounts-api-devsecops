@@ -1,0 +1,15 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: accounts-api-runtime
+policies:
+  - ../kyverno/accounts-api-runtime.yaml
+resources:
+  - accounts-api-runtime-bad.yaml
+results:
+  - policy: accounts-api-runtime-boundary
+    rule: disallow-container-runtime-socket
+    resources:
+      - accounts-api-bad-runtime-socket
+    kind: Pod
+    result: fail
