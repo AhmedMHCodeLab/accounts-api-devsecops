@@ -518,7 +518,98 @@ Detection remains a secondary control or compensating control where prevention i
 **Mapped threats:** T2, T3.
 
 ---
+## D-035 — Release Artifact Identity
 
+**Decision:** Production images use commit-derived tags (`sha-<commit>`) and deployment resolves the image to its immutable registry digest.
+
+**Reason:** Tags provide a human-readable release identifier, while the digest identifies the exact image content.
+
+**Mapped threat:** T1.
+
+---
+
+## D-036 — ECR Tag Immutability
+
+**Decision:** The production `accounts-api` ECR repository uses immutable image tags.
+
+**Reason:** Registry enforcement prevents an existing release tag from being overwritten.
+
+**Trade-off:** A release tag cannot be reused. A new build must receive a new tag.
+
+**Mapped threat:** T1.
+
+---
+
+## D-037 — GitHub Actions OIDC Trust
+
+**Decision:** GitHub Actions assumes a dedicated AWS build role through OIDC.
+
+**Trust scope:** Repository identity, repository owner identity, `main` branch, and the specific build workflow are restricted in the trust policy.
+
+**Reason:** No long-lived AWS credentials are required, and unrelated repositories or branches cannot assume the role.
+
+**Mapped threats:** T1, T3.
+
+---
+
+## D-038 — Keyless Image Signing
+
+**Decision:** Production images are signed with Cosign keyless signing using the GitHub Actions OIDC identity.
+
+**Trust root:** Sigstore Fulcio issues the short-lived certificate and Rekor provides the transparency log.
+
+**Reason:** Avoids long-lived signing-key storage in the repository or CI secrets.
+
+**Important limitation:** A valid signature establishes artifact identity/provenance under the configured trust policy. It does not establish absence of vulnerabilities or prove that source code is trustworthy.
+
+**Production consideration:** A regulated environment may choose privately operated signing infrastructure or a managed key-backed trust model where external Sigstore dependency or transparency requirements are unsuitable.
+
+**Mapped threat:** T1.
+
+---
+
+## D-039 — SBOM Attestation
+
+**Decision:** Generate an SPDX SBOM from the exact pushed image digest and attach it as a Cosign attestation.
+
+**Reason:** The SBOM must describe the exact immutable artifact that is signed and promoted.
+
+**Validation:** CI verifies the attestation against the image digest.
+
+**Mapped threat:** T1.
+
+---
+
+## D-040 — Release Verification
+
+**Decision:** CI verifies both the image signature and SBOM attestation immediately after creation.
+
+**Reason:** Signing without verification only demonstrates that the signing command executed; verification demonstrates that the configured trust policy accepts the resulting artifact.
+
+**Mapped threat:** T1.
+
+---
+
+## D-041 — GitHub Action Pinning
+
+**Decision:** Third-party GitHub Actions are initially referenced by maintained release version for assessment readability. Production rollout will pin every third-party action to an immutable commit SHA.
+
+**Reason:** Mutable action tags introduce another supply-chain mutation point.
+
+**Trade-off:** SHA pinning is less readable and requires controlled dependency updates.
+
+**Mapped threat:** T1.
+
+---
+## D-042 — Workflow Definition Protection
+
+**Decision:** Changes to the GitHub Actions workflow and other security-control files require explicit owner review through CODEOWNERS and protected `main`.
+
+**Reason:** OIDC restricts which workflow identity may obtain AWS credentials, but a compromised maintainer could otherwise modify the trusted workflow itself. Protecting the workflow definition prevents the identity boundary from becoming a false sense of security.
+
+**Mapped threat:** T1.
+
+---
 
 ## Open Decisions
 

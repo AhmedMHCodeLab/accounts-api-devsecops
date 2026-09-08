@@ -2,7 +2,7 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "GitHubActionsMainBuild",
+      "Sid": "GitHubActionsAccountsApiBuild",
       "Effect": "Allow",
       "Principal": {
         "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
@@ -11,13 +11,11 @@
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:repository_owner_id": "REPLACE_WITH_GITHUB_OWNER_ID",
-          "token.actions.githubusercontent.com:repository_id": "REPLACE_WITH_GITHUB_REPOSITORY_ID",
-          "token.actions.githubusercontent.com:ref": "refs/heads/main",
-          "token.actions.githubusercontent.com:workflow": "Build and Sign"
-        },
-        "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:REPLACE_WITH_OWNER@REPLACE_WITH_OWNER_ID/REPLACE_WITH_REPO@REPLACE_WITH_REPO_ID:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub": "repo:AhmedMHCodeLab@145441921/accounts-api-devsecops@1360765416:ref:refs/heads/main",
+          "token.actions.githubusercontent.com:repository_owner_id": "145441921",
+          "token.actions.githubusercontent.com:repository_id": "1360765416",
+          "token.actions.githubusercontent.com:workflow": "Build and Sign",
+          "token.actions.githubusercontent.com:ref": "refs/heads/main"
         }
       }
     }

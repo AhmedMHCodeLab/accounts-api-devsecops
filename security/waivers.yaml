@@ -1,0 +1,16 @@
+version: 1
+
+waivers:
+  - id: WAIVER-2026-001
+    gate: sca
+    finding: CVE-2026-12345
+    repository: AhmedMHCodeLab/accounts-api-devsecops
+    workload: accounts-api
+    reason: >
+      Vulnerability has no vendor fix and remediation requires an upstream
+      dependency release. Compensating control is restricted egress and
+      read-only workload privileges.
+    owner: platform-team
+    approver: security-approver
+    created: "2026-09-08"
+    expires: "2026-09-15"

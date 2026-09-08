@@ -1,0 +1,158 @@
+name: Security Gates
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  waiver-preflight:
+    name: Validate security waivers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Install waiver validator dependency
+        run: python -m pip install --disable-pip-version-check pyyaml
+
+      - name: Validate waiver file
+        run: python scripts/validate_waivers.py
+
+  gitleaks:
+    name: Secret scan - full history
+    runs-on: ubuntu-latest
+    needs: waiver-preflight
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast:
+    name: SAST
+    runs-on: ubuntu-latest
+    needs: waiver-preflight
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run Semgrep
+        run: |
+          set -euo pipefail
+
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/src" \
+            semgrep/semgrep:latest \
+            semgrep scan \
+            --config p/security-audit \
+            --severity ERROR \
+            --error \
+            --metrics=off \
+            /src
+
+  sca:
+    name: SCA
+    runs-on: ubuntu-latest
+    needs: waiver-preflight
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Scan source dependencies
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+          format: table
+
+  iac:
+    name: IaC security
+    runs-on: ubuntu-latest
+    needs: waiver-preflight
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Checkov
+        run: python -m pip install --disable-pip-version-check checkov
+
+      - name: Run Checkov
+        run: |
+          set -euo pipefail
+
+          checkov \
+            --directory terraform \
+            --external-checks-dir policy/checkov \
+            --framework terraform \
+            --output json \
+            --output-file-path checkov.json \
+            --soft-fail
+
+      - name: Enforce threat-model IaC controls
+        run: python scripts/check_iac_gate.py checkov.json
+
+      - name: Publish Checkov report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: checkov-report
+          path: checkov.json
+
+  container:
+    name: Container security
+    runs-on: ubuntu-latest
+    needs:
+      - gitleaks
+      - sast
+      - sca
+      - iac
+      - waiver-preflight
+
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build local image
+        run: |
+          set -euo pipefail
+
+          docker build \
+            --tag accounts-api:ci \
+            --file app/Dockerfile \
+            app
+
+      - name: Scan container image
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: accounts-api:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+          format: table
