@@ -5,7 +5,8 @@
       "Sid": "ReadAccountsApiDatabaseSecret",
       "Effect": "Allow",
       "Action": [
-        "secretsmanager:GetSecretValue"
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
       ],
       "Resource": "arn:aws:secretsmanager:ap-south-1:123456789012:secret:accounts-api/prod/db-*"
     },

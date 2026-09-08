@@ -502,6 +502,7 @@ Detection remains a secondary control or compensating control where prevention i
 **Current scope:**
 
 - `secretsmanager:GetSecretValue` on the `accounts-api` production database secret only
+- `secretsmanager:DescribeSecret` on the same secret, required by the Secrets Manager CSI/ASCP integration
 - `kms:Decrypt` on the specific KMS key protecting that secret
 - KMS decrypt restricted with `kms:ViaService` to Secrets Manager
 
@@ -509,13 +510,17 @@ Detection remains a secondary control or compensating control where prevention i
 
 **Reason:** The supplied `Allow` + `NotAction` + `Resource: "*"` policy gives a compromised application unnecessarily broad AWS API access. For a financial workload, compromise of the application should not become compromise of the AWS account.
 
+**Current implementation:** The application credential is delivered through AWS Secrets Manager using ASCP/Secrets Store CSI with EKS Pod Identity. `DescribeSecret` is therefore included as an explicit least-privilege dependency rather than treating the integration as a reason for broad Secrets Manager access.
+
 **Important limitation:** The assessment does not specify the backing AWS service or resource for the audit/event stream. No additional permissions are invented. Those permissions will be added only after the concrete dependency, required actions, and target resources are established.
 
 **Security effect:** Application compromise is contained to the minimum AWS capability currently demonstrated as required, reducing the blast radius for T2 and T3.
 
-**Validation:** A regression test rejects unrestricted wildcard actions/resources and verifies the intended Secrets Manager and KMS permissions remain scoped to the accounts-api resources.
+**Validation:** A regression test rejects unrestricted wildcard actions/resources and verifies the expected Secrets Manager and KMS permissions and the `kms:ViaService` restriction.
 
 **Mapped threats:** T2, T3.
+
+---
 
 ---
 ## D-035 — Release Artifact Identity
@@ -610,6 +615,73 @@ Detection remains a secondary control or compensating control where prevention i
 **Mapped threat:** T1.
 
 ---
+## D-043 — Security Gate Thresholds
+
+**Decision:** The initial blocking thresholds are:
+
+- Secret detected: block.
+- SCA: HIGH and CRITICAL vulnerabilities block.
+- SAST: ERROR findings block.
+- IaC: accounts-api threat-model checks block.
+- Other Checkov recommendations: warn/report initially.
+
+**Reason:** Blocking on directly exploitable or materially risky findings provides a defensible baseline without turning low-signal recommendations into permanent deployment friction.
+
+**Trade-off:** Some medium/low findings can remain temporarily unresolved. This is deliberate and requires normal remediation ownership.
+
+**Mapped threats:** T1, T2, T3, T4.
+
+---
+
+## D-044 — Full-History Secret Scanning
+
+**Decision:** Gitleaks scans the complete Git history in CI using `fetch-depth: 0`.
+
+**Reason:** A secret removed from the current tree may remain exposed in an earlier commit.
+
+**Mapped threats:** T1, T3, T4.
+
+---
+
+## D-045 — Expiring Waivers
+
+**Decision:** Security waivers live in `security/waivers.yaml` and require a finding ID, business/technical justification, affected workload, named owner, named approver, creation date, and hard expiry.
+
+**Maximum lifetime:** 7 days.
+
+**Enforcement:** CI validates the waiver schema and fails when a waiver expires or exceeds the maximum lifetime.
+
+**Operational principle:** A waiver is an explicitly approved temporary exception, not a permanent scanner suppression.
+
+**Mapped threats:** T1–T5 depending on gate.
+
+---
+
+## D-046 — Break-Glass
+
+**Decision:** Production emergency recovery uses a separately documented break-glass path rather than silently disabling security gates.
+
+**Reason:** Availability incidents require an escape path, but that path must remain auditable, temporary, and narrow.
+
+**Evidence:** Incident record, GitHub workflow/deployment history, AWS CloudTrail, and Kubernetes audit/deployment records where available.
+
+**Mapped threats:** T1–T5 depending on incident.
+
+## D-047 — Admission and Runtime Enforcement
+
+**Decision:** PSA Restricted is enforced for the accounts namespace. Kyverno provides workload-specific admission controls, including production image signature verification and digest enforcement.
+
+**Reason:** PSA provides the generic Kubernetes pod security baseline while Kyverno handles application-specific requirements without duplicating standard controls.
+
+**Image trust:** Production `accounts-api` images must be signed by the approved GitHub Actions workflow identity. Image tags are resolved to digests and unsigned/untrusted images are rejected.
+
+**Runtime detection:** Falco detects shell execution inside `accounts-api`, which has no legitimate operational requirement to spawn an interactive shell.
+
+**Egress:** accounts-api uses default-deny egress with explicit DNS and KYC provider connectivity.
+
+**Limitation:** Kubernetes NetworkPolicy provides L3/L4 controls and cannot establish that traffic over an allowed HTTPS destination is benign or prevent exfiltration over an explicitly permitted connection.
+
+**Mapped threats:** T1, T2, T5.
 
 ## Open Decisions
 

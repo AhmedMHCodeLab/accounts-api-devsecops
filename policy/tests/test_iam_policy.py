@@ -1,7 +1,12 @@
 import json
 from pathlib import Path
 
-POLICY = Path(__file__).resolve().parents[2] / "iam" / "accounts-api-policy.json"
+
+POLICY = (
+    Path(__file__).resolve().parents[2]
+    / "iam"
+    / "accounts-api-policy.json"
+)
 
 
 def as_list(value):
@@ -25,9 +30,15 @@ def main() -> None:
         for resource in as_list(statement["Resource"])
     }
 
-    assert "*" not in actions, "IAM policy must not grant wildcard actions"
+    # No unrestricted IAM actions.
+    assert "*" not in actions, (
+        "IAM policy must not grant wildcard actions"
+    )
 
-    assert "*" not in resources, "IAM policy must not grant all resources"
+    # No unrestricted resources.
+    assert "*" not in resources, (
+        "IAM policy must not grant all resources"
+    )
 
     expected_secret_arn = (
         "arn:aws:secretsmanager:ap-south-1:123456789012:"
@@ -42,11 +53,14 @@ def main() -> None:
     assert expected_secret_arn in resources
     assert expected_kms_arn in resources
 
+    # Exact action set expected for the current accounts-api design.
     assert actions == {
         "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
         "kms:Decrypt",
     }
 
+    # Resources must remain inside the intended AWS services/region.
     assert all(
         resource.startswith(
             (
@@ -63,8 +77,10 @@ def main() -> None:
         if statement["Sid"] == "DecryptAccountsApiSecret"
     )
 
-    assert kms_statement["Condition"]["StringEquals"]["kms:ViaService"] == (
-        "secretsmanager.ap-south-1.amazonaws.com"
+    # KMS use is restricted to Secrets Manager.
+    assert (
+        kms_statement["Condition"]["StringEquals"]["kms:ViaService"]
+        == "secretsmanager.ap-south-1.amazonaws.com"
     )
 
     print("IAM policy checks passed")
