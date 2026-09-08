@@ -1,0 +1,18 @@
+metadata:
+  name: "CloudTrail must be multi-region"
+  id: "CKV2_AWS_ACCOUNTS_6"
+  category: "LOGGING"
+  severity: "HIGH"
+
+definition:
+  and:
+    - cond_type: filter
+      attribute: resource_type
+      value: aws_cloudtrail
+      operator: within
+    - cond_type: attribute
+      resource_types:
+        - aws_cloudtrail
+      attribute: is_multi_region_trail
+      operator: equals
+      value: true

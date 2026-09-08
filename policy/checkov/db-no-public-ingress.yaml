@@ -1,0 +1,15 @@
+metadata:
+  name: "PostgreSQL security group ingress must not be public"
+  id: "CKV2_AWS_ACCOUNTS_9"
+  category: "NETWORKING"
+  severity: "CRITICAL"
+  guideline: "PostgreSQL must only be reachable from explicitly trusted application sources."
+
+definition:
+  not:
+    cond_type: "attribute"
+    resource_types:
+      - "aws_security_group_rule"
+    attribute: "cidr_blocks"
+    operator: "contains"
+    value: "0.0.0.0/0"

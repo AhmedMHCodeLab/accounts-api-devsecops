@@ -1,0 +1,35 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: accounts-api-runtime-boundary
+  annotations:
+    policies.kyverno.io/title: Accounts API runtime boundary
+    policies.kyverno.io/category: Security
+    policies.kyverno.io/description: >
+      Prevent accounts-api from mounting container runtime sockets.
+      This workload has no legitimate requirement for host container-runtime access.
+spec:
+  background: true
+  validationFailureAction: Enforce
+  rules:
+    - name: disallow-container-runtime-socket
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - accounts
+      validate:
+        message: "accounts-api must not mount a container runtime socket."
+        foreach:
+          - list: "request.object.spec.containers[].volumeMounts[]"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.mountPath }}"
+                    operator: AnyIn
+                    value:
+                      - /var/run/docker.sock
+                      - /run/docker.sock
+                      - /run/containerd/containerd.sock

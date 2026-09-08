@@ -1,0 +1,18 @@
+metadata:
+  name: "CloudTrail log file validation must be enabled"
+  id: "CKV2_AWS_ACCOUNTS_8"
+  category: "LOGGING"
+  severity: "HIGH"
+
+definition:
+  and:
+    - cond_type: filter
+      attribute: resource_type
+      value: aws_cloudtrail
+      operator: within
+    - cond_type: attribute
+      resource_types:
+        - aws_cloudtrail
+      attribute: enable_log_file_validation
+      operator: equals
+      value: true

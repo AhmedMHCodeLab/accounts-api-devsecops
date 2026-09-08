@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadAccountsApiDatabaseSecret",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": "arn:aws:secretsmanager:ap-south-1:123456789012:secret:accounts-api/prod/db-*"
+    },
+    {
+      "Sid": "DecryptAccountsApiSecret",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Resource": "arn:aws:kms:ap-south-1:123456789012:key/REPLACE_WITH_ACCOUNTS_API_SECRET_KEY_ID",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "secretsmanager.ap-south-1.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
